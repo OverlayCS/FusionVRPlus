@@ -20,9 +20,16 @@ It takes care of common networking tasks, integrates essential APIs, and include
 
 ## Usage
 
-# Connecting To A Room
+# Room Stuff
 
 ```cs
+//CONNECTING 
 // if the room is already created the max players wont change neither will the PrivateRoom bool
 FusionVRPlusManager.Manager.ConnectToRoom(string roomName, int MaxPlayers, bool PrivateRoom);
 ```
+
+```cs
+//DISCONNECTING
+FusionVRPlusManager.Manager.LeaveRoom();
+```
+
