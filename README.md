@@ -13,6 +13,9 @@ FusionVRPlus is a lightweight and powerful wrapper for **Fusion 2**, designed to
 - Automatic offline cosmetics, colors, and name handling  
 - Improved ban handling for better security
 
+## Included Packages
+[ParrelSync](https://github.com/VeriorPies/ParrelSync)
+
 ## Overview
 
 FusionVRPlus provides a simple and efficient way to build multiplayer VR games using Fusion 2.  
