@@ -14,7 +14,8 @@ FusionVRPlus is a lightweight and powerful wrapper for **Fusion 2**, designed to
 - Improved ban handling for better security
 
 ## Included Packages
-[ParrelSync](https://github.com/VeriorPies/ParrelSync)
+[ParrelSync](https://github.com/VeriorPies/ParrelSync) 
+
 [GUI-Wizard](https://github.com/OverlayCS/GUI-Wizard)
 
 ## Overview
