@@ -23,34 +23,3 @@ FusionVRPlus is a lightweight and powerful wrapper for **Fusion 2**, designed to
 FusionVRPlus provides a simple and efficient way to build multiplayer VR games using Fusion 2.  
 It takes care of common networking tasks, integrates essential APIs, and includes systems for cosmetics, moderation, and more — allowing you to focus on gameplay instead of low-level networking details.
 
-## Usage
-
-# Room Stuff
-
-```cs
-//CONNECTING 
-// if the room is already created the max players wont change neither will the PrivateRoom bool
-FusionVRPlusManager.Manager.ConnectToRoom(string roomName, int MaxPlayers, bool PrivateRoom);
-```
-
-```cs
-//DISCONNECTING
-FusionVRPlusManager.Manager.LeaveRoom();
-```
-
-# Player Stuff
-
-```cs
-//setting player color
-FusionVRPlusManager.SetPlayerColor(Color.white);
-```
-
-```cs
-//set player name
-FusionVRPlusManager.SetPlayerName("Overlay");
-```
-
-```cs
-//toggling a cosmetic
-FusionVRPlusManager.ToggleCosmetic("TopHat", "Head");
-```
