@@ -38,3 +38,19 @@ FusionVRPlusManager.Manager.ConnectToRoom(string roomName, int MaxPlayers, bool 
 FusionVRPlusManager.Manager.LeaveRoom();
 ```
 
+# Player Stuff
+
+```cs
+//setting player color
+FusionVRPlusManager.SetPlayerColor(Color.white);
+```
+
+```cs
+//set player name
+FusionVRPlusManager.SetPlayerName("Overlay");
+```
+
+```cs
+//toggling a cosmetic
+FusionVRPlusManager.ToggleCosmetic("TopHat", "Head");
+```
