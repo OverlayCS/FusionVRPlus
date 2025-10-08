@@ -13,6 +13,12 @@ FusionVRPlus is a lightweight and powerful wrapper for **Fusion 2**, designed to
 - Automatic offline cosmetics, colors, and name handling  
 - Improved ban handling for better security
 
+## Required Packages
+
+[Photon Fusion 2](https://assetstore.unity.com/packages/tools/network/photon-fusion-267958)
+
+[Photon Voice 2](https://assetstore.unity.com/packages/tools/audio/photon-voice-2-130518)
+
 ## Included Packages
 [ParrelSync](https://github.com/VeriorPies/ParrelSync) 
 
