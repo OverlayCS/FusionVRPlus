@@ -8,7 +8,7 @@ FusionVRPlus is a lightweight and powerful wrapper for **Fusion 2**, designed to
 - Very low latency networking (performance depends on your internet connection)  
 - Easy-to-use scripting API  
 - Custom cosmetic slots system  
-- PlayFab integration (required for Attention API)  
+- PlayFab integration (required for Attention API not in first release)  
 - Developer console with admin commands (requires PlayFab, not included in the first release)  
 - Automatic offline cosmetics, colors, and name handling  
 - Improved ban handling for better security
