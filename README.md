@@ -22,7 +22,7 @@ FusionVRPlus is a lightweight and powerful wrapper for **Fusion 2**, designed to
 ## Included Packages
 [ParrelSync](https://github.com/VeriorPies/ParrelSync) 
 
-[GUI-Wizard](https://github.com/OverlayCS/GUI-Wizard)
+[GUI-Wizard](https://github.com/OverlayCS/GUI-Wizard)(not finished expect bugs)
 
 ## Overview
 
