@@ -3,7 +3,6 @@ using Fusion.Photon.Realtime;
 using Fusion.Sockets;
 using FusionVRPlus.Misc;
 using FusionVRPlus.PlayFabNetworking;
-using Photon.Pun;
 using PlayFab;
 using System;
 using System.Collections;
@@ -401,4 +400,5 @@ namespace FusionVRPlus.Networking
         }
         #endregion
     }
+
 }
