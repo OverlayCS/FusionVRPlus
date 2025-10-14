@@ -1,6 +1,7 @@
 ﻿using Fusion;
 using FusionVRPlus.Misc;
 using FusionVRPlus.PlayFabNetworking;
+using FusionVRPlus.Saving;
 using PlayFab;
 using System;
 using System.Collections.Generic;
@@ -35,41 +36,37 @@ namespace FusionVRPlus.Networking
 
     public class FusionVRPlusPlayer : NetworkBehaviour
     {
-        public bool IsLocalPlayer => Object.InputAuthority == FusionVRPlusNetworkRunner.Runner.LocalPlayer;
+        public bool InOfflineMode = false;
 
-        [Networked, SerializeField] private string NetUsername { get; set; } //only used inside the player script 
-        [SerializeField] private TextMeshPro UsernameText;
+        public bool IsLocalPlayer => Object.InputAuthority == FusionVRPlusManager.Runner.LocalPlayer;
+
+        [Networked, SerializeField] private string NetUsername { get; set; } // Used only in the player script
+        [Networked] private string userID { get; set; } // Used for PlayFab
+        public string UserID => userID;
+
+        public string username; // Used for other players & saving (Fusion limitation workaround)
         [Networked, SerializeField] private Color NetPlayerColor { get; set; }
-        [Networked] private string NetPlayerID { get; set; }
-        [Header("Reguired For Debug Mode")]
-        [SerializeField] private TextMeshPro PlayerColorText;
-        [SerializeField] private TextMeshPro HeadPosText;
-        [SerializeField] private TextMeshPro RHandPosText;
-        [SerializeField] private TextMeshPro LHandPosText;
-        [SerializeField] private float smoothFactor = 5f;
-
-        [Space(50)]
-
-        [Header("Only Shows First 6 Characters")]
-        [SerializeField] private TextMeshPro PlayerIDText;
-        [SerializeField] private Renderer[] PlayerRenderers;
-        [Networked, Capacity(12)] private NetworkLinkedList<int> equippedCosmetics => default;// for networking
-        [SerializeField] private List<Cosmetic> EquippedCosmetics = new(); // just easy to use
-        [SerializeField] private List<CosmeticSlot> CosmeticSlots = new();
- 
-        public string username; //this is what is used for the other players and saving bc fusion complains
         public Color playerColor;
 
+        [Header("UI References")]
+        [SerializeField] private TextMeshPro UsernameText;
+        [SerializeField] private TextMeshPro PlayerIDText; // Only shows first 6 characters
+        [SerializeField] private TextMeshPro PlayerColorText;
+
+        [Header("Renderers")]
+        [SerializeField] private Renderer[] PlayerRenderers;
+
+        [Header("Cosmetics")]
+        [Networked, Capacity(12)] private NetworkLinkedList<int> equippedCosmetics => default; // Networked cosmetics
+        [SerializeField] private List<Cosmetic> EquippedCosmetics = new(); // Local reference
+        [SerializeField] private List<CosmeticSlot> CosmeticSlots = new(); // Local cosmetic slots
+
+        [Header("Player Body References")]
         [SerializeField] private Transform Head;
         [SerializeField] private Transform LHand;
         [SerializeField] private Transform RHand;
 
-        [Header("Not Added Yet")]
-        [SerializeField] private List<GameObject> ObjectToCullForLocalPlayer;
-        [SerializeField] private LayerMask CullLayer;
-
-        public bool DebugMode;
-
+        [Header("Networked Transforms")]
         [Networked] private Vector3 NetHeadPos { get; set; }
         [Networked] private Quaternion NetHeadRot { get; set; }
         [Networked] private Vector3 NetLeftPos { get; set; }
@@ -77,12 +74,20 @@ namespace FusionVRPlus.Networking
         [Networked] private Vector3 NetRightPos { get; set; }
         [Networked] private Quaternion NetRightRot { get; set; }
 
+        [Header("Smoothing (Higher the number the less smoothing)")]
+        [SerializeField] private float smoothFactor = 5f;
         private Vector3 smoothedHeadPos;
         private Quaternion smoothedHeadRot;
         private Vector3 smoothedLeftPos;
         private Quaternion smoothedLeftRot;
         private Vector3 smoothedRightPos;
         private Quaternion smoothedRightRot;
+
+        [Header("Required For Debug Mode")]
+        [SerializeField] private TextMeshPro HeadPosText;
+        [SerializeField] private TextMeshPro RHandPosText;
+        [SerializeField] private TextMeshPro LHandPosText;
+        public bool DebugMode;
 
         public ChangeDetector changeDetector;
 
@@ -93,47 +98,38 @@ namespace FusionVRPlus.Networking
 
             if(IsLocalPlayer)
             {
-                string SavedName = FusionVRPlusPlayFabPrefs.GetString("username", FusionVRPlusManager.Manager.DefaultPlayerName);
+                var savedName = FusionVRPlusSavingManager.Instance.LoadNetworkedUsername();
+                var savedColor = FusionVRPlusSavingManager.Instance.LoadNetworkedColor();
+                var savedCosmetics = FusionVRPlusSavingManager.Instance.LoadNetworkedCosmetics();
 
-                //getting saved data
-                if(string.IsNullOrEmpty(SavedName))
+                NetUsername = savedName;
+                NetPlayerColor = savedColor;
+
+                foreach(var i in savedCosmetics)
                 {
-                    NetUsername = FusionVRPlusManager.Manager.DefaultPlayerName;
-                }
-                else
-                {
-                    Color savedColor = JsonUtility.FromJson<Color>(FusionVRPlusPlayFabPrefs.GetString("color"));
-
-                    NetPlayerColor = savedColor;
-
-                    NetUsername = SavedName.ToUpper();
+                    equippedCosmetics.Add(i);
+                    EquippedCosmetics.Add(GetCosmeticFromID(i));
                 }
 
                 UpdatePlayerName();
                 UpdatePlayerColor();
+                UpdateCosmeticVisuals();
 
                 //getting ids first 6 characters                              ⬇ i hated this
                 string FirstSix = FusionVRPlusPlayFabManager.Instance.UserID[..Math.Min(6, FusionVRPlusPlayFabManager.Instance.UserID.Length)];
                 PlayerIDText.text = $"ID: {FirstSix}";
 
+                userID = FirstSix;
+
                 FusionVRPlusManager.LocalPlayer = this;
-
-                DeserializeEquippedCosmetics(FusionVRPlusPlayFabPrefs.GetString("EquippedCosmetics"));
-
-                Camera.main.cullingMask += CullLayer;
-
-                foreach(var obj in ObjectToCullForLocalPlayer)
-                {
-                    obj.layer = CullLayer;
-                }
             }
         }
 
         public override void Despawned(NetworkRunner runner, bool hasState)
         {
-            FusionVRPlusPlayFabPrefs.SetString("username", username);
-            FusionVRPlusPlayFabPrefs.SetString("color", JsonUtility.ToJson(playerColor));
-            SaveCosmetics();
+            FusionVRPlusSavingManager.Instance.SaveUsername(username);
+            FusionVRPlusSavingManager.Instance.SaveColor(playerColor);
+            FusionVRPlusSavingManager.Instance.SaveCosmetics(SerializeEquippedCosmetics());
         }
 
         public string SerializeEquippedCosmetics()
@@ -150,6 +146,8 @@ namespace FusionVRPlus.Networking
 
         public void DeserializeEquippedCosmetics(string data)
         {
+            //TODO: scan for owned cosmetics and make sure they own them
+
             equippedCosmetics.Clear();
 
             if (string.IsNullOrEmpty(data))
@@ -186,6 +184,8 @@ namespace FusionVRPlus.Networking
 
         public override void Render()
         {
+            if(InOfflineMode) return;
+
             if (IsLocalPlayer)
             {
                 LocalUpdate();
@@ -213,6 +213,8 @@ namespace FusionVRPlus.Networking
 
         public override void FixedUpdateNetwork()
         {
+            if(InOfflineMode)return;
+
             if (!IsLocalPlayer) return;
 
             if (GetInput(out FusionVRPlusInput input))
@@ -228,6 +230,8 @@ namespace FusionVRPlus.Networking
 
         public void Update()
         {
+            if(InOfflineMode)return;
+
             //doing debug mode stuff idk
             PlayerColorText.gameObject.SetActive(DebugMode);
             PlayerIDText.gameObject.SetActive(DebugMode);
@@ -314,10 +318,11 @@ namespace FusionVRPlus.Networking
 
             string targetName = cosName.ToLower();
             string targetSlot = cosSlot.ToLower();
+            bool offline = targetName == "offline";
 
             foreach (CosmeticSlot slot in CosmeticSlots)
             {
-                if (slot.SlotName.ToLower() != targetSlot)
+                if (slot.SlotName.ToLower() != targetSlot && !offline)
                     continue;
 
                 for (int i = 0; i < slot.Cosmetics.Count; i++)
@@ -356,14 +361,8 @@ namespace FusionVRPlus.Networking
             }
         }
 
-        Cosmetic GetCosmeticFromID(int id)
+        public Cosmetic GetCosmeticFromID(int id)
         {
-            foreach (Cosmetic equipped in EquippedCosmetics)
-            {
-                if (equipped.ID == id)
-                    return equipped;
-            }
-
             foreach (CosmeticSlot slot in CosmeticSlots)
             {
                 foreach (Cosmetic cosmetic in slot.Cosmetics)

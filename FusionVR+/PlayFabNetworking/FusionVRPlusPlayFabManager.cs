@@ -122,5 +122,52 @@ namespace FusionVRPlus.PlayFabNetworking
                     BanReason.text = $"Reason: {item.Key}";
             }
         }
+
+        public List<ItemInstance> GetUserInventory()
+        {
+            List<ItemInstance> items = new List<ItemInstance>();
+
+            GetUserInventoryRequest request = new GetUserInventoryRequest();
+
+            PlayFabClientAPI.GetUserInventory(request, result =>
+            {
+                items = result.Inventory;
+            }, error =>
+            {
+                FusionVRPlusLogger.PrintMessage("Failed to get user inventory: " + error.ErrorMessage, MessageType.Error);
+                items = new List<ItemInstance>();
+            });
+
+            return items ?? new List<ItemInstance>();
+        }
+
+        public int GetUserVirtualCurrency(string currencyCode)
+        {
+            int balance = 0;
+
+            GetUserInventoryRequest request = new GetUserInventoryRequest();
+            PlayFabClientAPI.GetUserInventory(request, result =>
+            {
+                if (result.VirtualCurrency.TryGetValue(currencyCode, out int value))
+                {
+                    balance = value;
+                }
+                else
+                {
+                    balance = 0;
+                }
+            }, error =>
+            {
+                FusionVRPlusLogger.PrintMessage("Failed to get user inventory: " + error.ErrorMessage, MessageType.Error);
+                balance = 0;
+            });
+
+            return balance;
+        }
+
+        private  Dictionary<string, string> GetTitleData()
+        {
+            return new Dictionary<string, string>();
+        }
     }
 }

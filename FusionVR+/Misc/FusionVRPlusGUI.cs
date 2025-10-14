@@ -1,4 +1,6 @@
 ﻿using FusionVRPlus.Networking;
+using FusionVRPlus.PlayFabNetworking;
+using FusionVRPlus.Saving;
 using UnityEngine;
 
 namespace FusionVRPlus.Misc
@@ -15,12 +17,17 @@ namespace FusionVRPlus.Misc
         private GUIStyle buttonStyle;
         private GUIStyle activeTabStyle;
 
+        private GUIStyle sliderStyle;
+        private GUIStyle sliderThumbStyle;
+
         public int PanelRadius = 10;
         public int ButtonRadius = 8;
         public int TextFieldRadius = 6;
 
+        public float MaxPlayerInput = 5;
+
         private int currentTab = 0; // 0 = Networking, 1 = Cosmetics
-        private readonly string[] tabNames = { "Networking", "Cosmetics", "Player" };
+        private readonly string[] tabNames = { "Networking", "Cosmetics", "Player", "Debug" };
 
         public Rect windowRect = new Rect(100, 100, 320, 450);
 
@@ -34,7 +41,6 @@ namespace FusionVRPlus.Misc
 
         void DrawWindow(int id)
         {
-            // --- Tabs ---
             GUILayout.BeginHorizontal();
             for (int i = 0; i < tabNames.Length; i++)
             {
@@ -47,7 +53,6 @@ namespace FusionVRPlus.Misc
 
             GUILayout.Space(10);
 
-            // --- Tab Content ---
             switch (currentTab)
             {
                 case 0:
@@ -58,6 +63,9 @@ namespace FusionVRPlus.Misc
                     break;
                 case 2:
                     DrawPlayerTab();
+                    break;
+                case 3:
+                    DrawDebugTab();
                     break;
             }
 
@@ -75,7 +83,7 @@ namespace FusionVRPlus.Misc
                 if (GUILayout.Button("Join Room", buttonStyle, GUILayout.Height(35)))
                     _ = FusionVRPlusManager.Manager.ConnectToServer(RoomNameInput, 10, false);
 
-                GUI.enabled = FusionVRPlusNetworkRunner.IsInRoom();
+                GUI.enabled = FusionVRPlusManager.Manager.IsInRoom();
                 if (GUILayout.Button("Leave Room", buttonStyle, GUILayout.Height(35)))
                     FusionVRPlusManager.Manager.LeaveRoom();
                 GUI.enabled = true;
@@ -83,18 +91,97 @@ namespace FusionVRPlus.Misc
                 GUILayout.Space(10);
                 if (GUILayout.Button("Toggle Debug Mode", buttonStyle, GUILayout.Height(35)))
                 {
-                    foreach (var plr in FusionVRPlusNetworkRunner.Players)
+                    foreach (var plr in FusionVRPlusManager.Manager.Players)
                         plr.DebugMode = !plr.DebugMode;
                 }
 
                 GUILayout.Space(10);
                 GUILayout.Label("Is Shared Mode Master: " +
-                    FusionVRPlusNetworkRunner.IsSharedModeMasterClient().ToString(), labelStyle);
+                    FusionVRPlusManager.Manager.IsSharedModeMasterClient().ToString(), labelStyle);
+
+                GUILayout.Space(10);
+
+                GUILayout.Label($"Max Players: {(int)MaxPlayerInput}", labelStyle);
+
+                MaxPlayerInput = Mathf.Round(GUILayout.HorizontalSlider(MaxPlayerInput, 1, 10, sliderStyle, sliderThumbStyle));
+
             }
             else
             {
                 GUILayout.Space(20);
                 GUILayout.Label("⚠️ FusionVRPlusManager not initialized!", labelStyle);
+            }
+        }
+
+        private void DrawDebugTab()
+        {
+            GUILayout.Label("Debug", labelStyle);
+            GUILayout.Space(8);
+
+            if (FusionVRPlusManager.Manager != null && FusionVRPlusManager.Runner != null)
+            {
+                GUILayout.Space(10);
+                GUILayout.Label($"Is In Room: {FusionVRPlusManager.Manager.IsInRoom()}", labelStyle);
+                GUILayout.Label($"Current Session Name: {FusionVRPlusManager.Runner.SessionInfo.Name}", labelStyle);
+                GUILayout.Label($"Local Player ID: {FusionVRPlusPlayFabManager.Instance.UserID}", labelStyle);
+                GUILayout.Label($"Connected Players: {FusionVRPlusManager.Manager.Players.Count}", labelStyle);
+
+                GUILayout.Space(15);
+                GUILayout.Label("---- Network State ----", labelStyle);
+                GUILayout.Label($"Runner Mode: {FusionVRPlusManager.Runner.GameMode}", labelStyle);
+                GUILayout.Label($"Runner State: {FusionVRPlusManager.Runner.IsRunning}", labelStyle);
+                GUILayout.Label($"Is Server: {FusionVRPlusManager.Runner.IsServer}", labelStyle);
+                GUILayout.Label($"Is Client: {!FusionVRPlusManager.Runner.IsServer}", labelStyle);
+                GUILayout.Label($"Connection Type: {FusionVRPlusManager.Runner.Config.PeerMode}", labelStyle);
+
+                GUILayout.Space(10);
+                GUILayout.Label("---- Performance & Timing ----", labelStyle);
+                GUILayout.Label($"Tick Rate: {FusionVRPlusManager.Runner.TickRate}", labelStyle);
+                GUILayout.Label($"Current Tick: {FusionVRPlusManager.Runner.Tick}", labelStyle);
+                GUILayout.Label($"Network Ping: {FusionVRPlusManager.Runner.GetPlayerRtt(FusionVRPlusManager.Runner.LocalPlayer)} ms", labelStyle);
+                GUILayout.Label($"Resimulations: {FusionVRPlusManager.Runner.IsResimulation}", labelStyle);
+
+                GUILayout.Space(10);
+                GUILayout.Label("---- Local Player Info ----", labelStyle);
+                if (FusionVRPlusManager.LocalPlayer != null)
+                {
+                    GUILayout.Label($"Player Object Active: {FusionVRPlusManager.LocalPlayer.isActiveAndEnabled}", labelStyle);
+                    GUILayout.Label($"Is Local Player: {FusionVRPlusManager.LocalPlayer.IsLocalPlayer}", labelStyle);
+                    GUILayout.Label($"UserID: {FusionVRPlusManager.LocalPlayer.UserID}", labelStyle);
+                    GUILayout.Label($"Username: {FusionVRPlusManager.LocalPlayer.username}", labelStyle);
+
+                    GUILayout.Space(5);
+
+                    GUILayout.Label("--- Equipped Cosmetics ---", labelStyle);
+                    foreach (var cos in FusionVRPlusSavingManager.Instance.GetAllCosmeticIDs())
+                    {
+                        GUILayout.Label($"Equipped Cosmetic: {FusionVRPlusManager.LocalPlayer.GetCosmeticFromID(cos).Name} ID: {FusionVRPlusManager.LocalPlayer.GetCosmeticFromID(cos).ID}", labelStyle);
+                    }
+                }
+                else
+                {
+                    GUILayout.Label("Local Player: Not Spawned", labelStyle);
+                }
+
+                GUILayout.Space(10);
+                //GUILayout.Label("---- Network Stats ----", labelStyle);
+                //var stats = FusionVRPlusManager.Runner.pak;
+                //GUILayout.Label($"Packet Loss: {stats.PacketLoss}%", labelStyle);
+                //GUILayout.Label($"Packets Sent: {stats.PacketsSent}", labelStyle);
+                //GUILayout.Label($"Packets Received: {stats.PacketsReceived}", labelStyle);
+                //GUILayout.Label($"Bytes Sent: {stats.BytesSent}", labelStyle);
+                //GUILayout.Label($"Bytes Received: {stats.BytesReceived}", labelStyle);
+
+                GUILayout.Space(10);
+                GUILayout.Label("---- PlayFab Info ----", labelStyle);
+                //GUILayout.Label($"Logged In: {FusionVRPlusPlayFabManager.Instance.IsLoggedIn}", labelStyle);
+                //GUILayout.Label($"PlayFab ID: {FusionVRPlusPlayFabManager.Instance.UserID}", labelStyle);
+                //GUILayout.Label($"Display Name: {FusionVRPlusPlayFabManager.Instance.DisplayName}", labelStyle);
+            }
+            else
+            {
+                GUILayout.Space(10);
+                GUILayout.Label("FusionVRPlusManager or NetworkRunner not initialized!", labelStyle);
             }
         }
 
@@ -105,7 +192,7 @@ namespace FusionVRPlus.Misc
             GUILayout.Label("Players", labelStyle);
             GUILayout.Space(8);
 
-            var players = FusionVRPlusNetworkRunner.GetPlayerList();
+            var players = FusionVRPlusManager.Manager.Players;
 
             if (players == null || players.Count == 0)
             {
@@ -128,6 +215,8 @@ namespace FusionVRPlus.Misc
 
                 GUILayout.BeginHorizontal();
                 GUILayout.Label(plr.username, labelStyle, GUILayout.Width(180));
+                GUILayout.Label("ID: " + plr.UserID,
+                        new GUIStyle(labelStyle) { richText = true, alignment = TextAnchor.MiddleCenter });
 
                 GUILayout.FlexibleSpace();
 
@@ -180,6 +269,13 @@ namespace FusionVRPlus.Misc
             Texture2D activeTabTex = MakeRoundedTex(2, 2, new Color(0.15f, 0.35f, 0.45f), ButtonRadius);
             Texture2D textFieldTex = MakeRoundedTex(2, 2, new Color(0.20f, 0.20f, 0.20f), TextFieldRadius);
 
+            // NEW SLIDER TEXTURES
+            Texture2D sliderBackgroundTex = MakeRoundedTex(2, 2, new Color(0.18f, 0.18f, 0.18f), 4);
+            Texture2D sliderFillTex = MakeRoundedTex(2, 2, new Color(0.25f, 0.55f, 0.75f), 4);
+            Texture2D sliderThumbTex = MakeRoundedTex(2, 2, new Color(0.35f, 0.35f, 0.35f), 6);
+            Texture2D sliderThumbHoverTex = MakeRoundedTex(2, 2, new Color(0.45f, 0.45f, 0.45f), 6);
+            Texture2D sliderThumbActiveTex = MakeRoundedTex(2, 2, new Color(0.20f, 0.55f, 0.75f), 6);
+
             windowStyle = new GUIStyle(GUI.skin.window)
             {
                 fontSize = 16,
@@ -218,6 +314,25 @@ namespace FusionVRPlus.Misc
             activeTabStyle = new GUIStyle(buttonStyle)
             {
                 normal = { textColor = Color.cyan, background = activeTabTex }
+            };
+
+            // --- SLIDER STYLES ---
+            sliderStyle = new GUIStyle(GUI.skin.horizontalSlider)
+            {
+                normal = { background = sliderBackgroundTex },
+                fixedHeight = 16,
+                border = new RectOffset(4, 4, 4, 4),
+                margin = new RectOffset(8, 8, 4, 4)
+            };
+
+            sliderThumbStyle = new GUIStyle(GUI.skin.horizontalSliderThumb)
+            {
+                normal = { background = sliderThumbTex },
+                hover = { background = sliderThumbHoverTex },
+                active = { background = sliderThumbActiveTex },
+                fixedWidth = 16,
+                fixedHeight = 16,
+                border = new RectOffset(4, 4, 4, 4)
             };
         }
 
